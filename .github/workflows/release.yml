@@ -223,12 +223,17 @@ jobs:
             echo EOF
           } >> $GITHUB_OUTPUT
 
-      # 9. 生成证据包
+      # 9. 生成证据包（无密钥签名）
       - name: 生成证据包
         if: always()  # 即使构建失败也运行
         uses: OrygnsCode/ci-evidence-pack@8222d7b3b015ce2f72222215bdf9966773036ab1 # main
         with:
+          upload-name: evidence-bundle
           sign: 'true'
+          include: |
+            *.zip
+            release_notes.md
+          retention-days: 30
 
       # 10. 创建 GitHub Release
       - name: Create Release
