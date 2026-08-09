@@ -74,12 +74,12 @@
 
 ## 依赖
 
-- `sketchbook-py>=0.2.1`
+- `sketchbook-py>=0.2.1,<1.0.0`
 
 ## 开发信息
 
 - **插件名称**: astrbot_plugin_manosaba-memes
-- **版本**: v0.0.1
+- **版本**: v0.0.4
 - **作者**: 祁筱欣
 - **仓库**: https://github.com/xiaomizhoubaobei/astrbot_plugin_manosaba-memes
 - **基于**: [nonebot-plugin-manosaba-memes](https://github.com/zhaomaoniu/nonebot-plugin-manosaba-memes)
