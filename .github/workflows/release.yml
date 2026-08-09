@@ -7,6 +7,13 @@ on:
       - main
     paths:
       - '**/*.py'
+      - 'metadata.yaml'
+      - 'requirements.txt'
+      - 'logo.png'
+      - 'CHANGELOG.md'
+      - 'assets/**'
+      - 'previews/**'
+      - '.github/workflows/release.yml'
   workflow_dispatch:  # 允许手动触发
 
 permissions:
