@@ -72,16 +72,35 @@
 - 选项数量建议 3 条以内效果最佳
 - 角色与用户绑定，每个用户可以独立设置
 
+## 配置（可选）
+
+插件的配置通过 `_conf_schema.json` 定义，AstrBot 会自动解析并在管理面板中展示，配置保存在 `data/config/<插件名>_config.json`。可用配置项如下：
+
+| 配置项 | 说明 |
+|---|---|
+| `custom_font_anan` | 安安说话图片使用的字体路径（`.ttf`/`.otf`）。支持绝对路径或相对插件目录的路径。留空使用自带的思源黑体。 |
+| `custom_font_trial` | 审判表情包使用的字体路径（`.ttf`/`.otf`）。支持绝对路径或相对插件目录的路径。留空使用自带的思源宋体。 |
+| `anan_font_size` | 安安说话图片文字的最大字号（像素）。留空（0）使用默认值 40。 |
+| `trial_font_size` | 审判表情包选项文字的最大字号（像素）。留空（0）使用默认值 48。 |
+
+说明：
+- 自定义字体文件可放在插件目录（如 `assets/fonts/`）下，也可以使用系统绝对路径。
+- 自定义字体与默认字体构成回退链：若自定义字体缺少某些字形，会自动回退到默认字体补齐，不会中断渲染。
+- 字号的语义：
+  - 未单独设置字号时，使用默认字号（安安 40px / 审判 48px）；
+  - 设置了字号时，优先使用用户提供的字号；
+  - 上述两种情况若文字超出区域，都会自动缩小以适配。
+
 ## 依赖
 
-- `sketchbook-py>=0.2.1,<1.0.0`
+- `sketchbook-py>=1.2.1,<2.0.0`
 
 ## 开发信息
 
 - **插件名称**: astrbot_plugin_manosaba-memes
-- **版本**: v0.0.4
-- **作者**: 祁筱欣
-- **仓库**: https://github.com/xiaomizhoubaobei/astrbot_plugin_manosaba-memes
+- **版本**: v0.1.0
+- **作者**: 祁筱欣,Aer-Light-Work
+- **仓库**: https://github.com/Aer-Light-Work/astrbot_plugin_manosaba-memes
 - **基于**: [nonebot-plugin-manosaba-memes](https://github.com/zhaomaoniu/nonebot-plugin-manosaba-memes)
 
 ## 致谢

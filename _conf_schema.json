@@ -1,0 +1,26 @@
+{
+  "custom_font_anan": {
+    "description": "安安说话图片使用的字体文件路径（.ttf/.otf），支持绝对路径或相对于插件目录的路径。留空使用自带的思源黑体。",
+    "type": "string",
+    "hint": "示例：assets/fonts/MyFont.ttf 或 /usr/share/fonts/xxx.ttf",
+    "default": ""
+  },
+  "custom_font_trial": {
+    "description": "审判表情包使用的字体文件路径（.ttf/.otf），支持绝对路径或相对于插件目录的路径。留空使用自带的思源宋体。",
+    "type": "string",
+    "hint": "示例：assets/fonts/MyFont.ttf 或 /usr/share/fonts/xxx.ttf",
+    "default": ""
+  },
+  "anan_font_size": {
+    "description": "安安说话图片文字的最大字号（像素），文字塞不下时自动缩小。留空（0）使用默认值 40。",
+    "type": "float",
+    "hint": "0 = 使用默认值 40",
+    "default": 0
+  },
+  "trial_font_size": {
+    "description": "审判表情包选项文字的最大字号（像素），文字塞不下时自动缩小。留空（0）使用默认值 48。",
+    "type": "float",
+    "hint": "0 = 使用默认值 48",
+    "default": 0
+  }
+}

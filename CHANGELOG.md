@@ -6,6 +6,23 @@
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
 
+## [v0.1.0] - 2026-08-16
+
+### 新增
+- 支持自定义字体：新增配置项 `custom_font_anan`（安安）、`custom_font_trial`（审判），支持绝对路径或相对插件目录路径
+- 支持自定义字号：新增配置项 `anan_font_size`（默认 40）、`trial_font_size`（默认 48）
+  - 未设置字号时使用默认字号，文字塞不下时自动缩小适配
+  - 设置字号时优先使用用户字号，塞不下时同样自动缩小适配
+- 自定义字体与默认字体构成回退链，自定义字体缺字形时自动回退默认字体补齐
+
+### 重构
+- `drawer.py` 全面迁移至 sketchbook-py 1.x 新版 API（`FontSet` / `Region` / `Layer` / `ScaleMode` / `ParseRule`）
+- 升级依赖 `sketchbook-py>=1.2.1,<2.0.0`（原锁定 0.2.x 旧版 API，无法兼容新版）
+
+### 文档
+- README 新增自定义字体与字号配置说明
+- 配置改用 AstrBot 标准 `_conf_schema.json` 机制（原误放 metadata.yaml）
+
 ## [v0.0.4] - 2026-08-09
 
 ### 修复

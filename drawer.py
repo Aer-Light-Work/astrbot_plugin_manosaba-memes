@@ -1,14 +1,22 @@
-import math
+import sys
 from pathlib import Path
 from typing import Optional, List, Tuple
 
-from sketchbook import (
-    Drawer,  # type: ignore
-    TextStyle,  # type: ignore
-    PasteStyle,  # type: ignore
-    DrawerRegion,  # type: ignore
-    TextFitDrawer,  # type: ignore
+from sketchbook import (  # type: ignore
+    Drawer,
+    TextStyle,
+    Region,
+    Layer,
+    ScaleMode,
+    FontSet,
 )
+
+try:
+    from sketchbook import ParseRule  # type: ignore
+    _PARSE_RULE_AVAILABLE = True
+except ImportError:  # 部分环境/版本的 sketchbook 未导出 ParseRule
+    ParseRule = None  # type: ignore
+    _PARSE_RULE_AVAILABLE = False
 
 from .models import Character, Option, Statement
 from .constants import (
@@ -20,7 +28,6 @@ from .constants import (
     OPTION_START_X,
     OPTION_START_Y,
     OPTION_END_Y,
-    MAX_PADDING,
     MAX_OPTIONS_COUNT,
     STATEMENT_ICON_WIDTH,
     STATEMENT_ICON_HEIGHT,
@@ -30,17 +37,68 @@ from .constants import (
     TEXT_OFFSET_Y,
     TEXT_WIDTH,
     TEXT_HEIGHT,
-    MAX_FONT_HEIGHT,
     TEXT_COLOR,
     BRACKET_COLOR,
     ANAN_REGION_X,
     ANAN_REGION_Y,
     ANAN_REGION_WIDTH,
     ANAN_REGION_HEIGHT,
+    DEFAULT_ANAN_FONT,
+    DEFAULT_TRIAL_FONT,
+    DEFAULT_ANAN_FONT_SIZE,
+    DEFAULT_TRIAL_FONT_SIZE,
+    ANAN_BRACKET_COLOR,
 )
 
 
 PLUGIN_PATH = Path(__file__).parent
+
+
+def _resolve_font(value: Optional[str], default_rel: str) -> str:
+    """解析字体路径。
+
+    优先使用用户配置的路径（绝对路径，或相对于插件目录的路径）；
+    若不存在或为空则回退到随插件附带的默认字体。
+
+    Args:
+        value (Optional[str]): 用户配置的字体路径（`.ttf` / `.otf`）
+        default_rel (str): 插件内默认字体的相对路径
+
+    Returns:
+        str: 可用的字体文件绝对路径
+    """
+    if value:
+        raw = Path(value).expanduser()
+        if raw.is_file():
+            return str(raw)
+        relative = PLUGIN_PATH / raw
+        if relative.is_file():
+            return str(relative)
+        print(
+            f"[manosaba-memes] 警告: 自定义字体路径无效，已回退默认字体: {value}",
+            file=sys.stderr,
+        )
+    return str(PLUGIN_PATH / default_rel)
+
+
+def _make_font_set(primary: str, default_rel: str) -> FontSet:
+    """创建字体集合。
+
+    自定义字体在前、默认字体在后，构成回退链：
+    即使自定义字体缺少某些字形，也会自动用默认字体补齐，不会中断渲染。
+
+    Args:
+        primary (str): 主字体路径（可能来自用户配置）
+        default_rel (str): 默认字体相对路径（回退字体）
+
+    Returns:
+        FontSet: 配置好回退链的字体集合
+    """
+    default_path = str(PLUGIN_PATH / default_rel)
+    fonts = FontSet(primary)
+    if primary != default_path:
+        fonts.add(default_path)
+    return fonts
 
 
 def get_anan_base_image(face: Optional[str] = None) -> str:
@@ -69,7 +127,12 @@ def get_anan_base_image(face: Optional[str] = None) -> str:
     return str(PLUGIN_PATH / "assets/anan" / f"{safe_face}.png")
 
 
-def draw_anan(text: str, face: Optional[str] = None) -> bytes:
+def draw_anan(
+    text: str,
+    face: Optional[str] = None,
+    font: Optional[str] = None,
+    max_font_size: Optional[float] = None,
+) -> bytes:
     """Draw the image of what Anan says
 
     Args:
@@ -77,26 +140,35 @@ def draw_anan(text: str, face: Optional[str] = None) -> bytes:
         face (Optional[str], optional): The face type to be used. 
                                        Available: 害羞, 生气, 病娇, 无语, 开心. 
                                        Defaults to None.
+        font (Optional[str], optional): Custom font path. Defaults to None (use bundled font).
+        max_font_size (Optional[float], optional): Maximum font size in px. 
+                                                  None means auto-fit to the region.
 
     Returns:
         bytes: The image bytes of the drawn image
     """
-    drawer = TextFitDrawer(
-        base_image=get_anan_base_image(face),
-        font=str(PLUGIN_PATH / "assets/fonts/SourceHanSansSC-Bold.otf"),
-        overlay_image=str(PLUGIN_PATH / "assets/anan/base_overlay.png"),
-        region=DrawerRegion(
-            ANAN_REGION_X, 
-            ANAN_REGION_Y, 
-            ANAN_REGION_X + ANAN_REGION_WIDTH, 
-            ANAN_REGION_Y + ANAN_REGION_HEIGHT
-        ),
+    primary_font = _resolve_font(font, DEFAULT_ANAN_FONT)
+    fonts = _make_font_set(primary_font, DEFAULT_ANAN_FONT)
+
+    drawer = Drawer.from_image(get_anan_base_image(face), fonts)
+    drawer.overlay(str(PLUGIN_PATH / "assets/anan/base_overlay.png"))
+
+    # 未指定字号时使用默认字号（文字塞不下时自动缩小适配）
+    effective_max_font_size = (
+        float(max_font_size)
+        if max_font_size is not None
+        else float(DEFAULT_ANAN_FONT_SIZE)
     )
-    image_bytes = drawer.draw(
-        text=text,
-        style=TextStyle(color=(0, 0, 0, 255)),
-    )
-    return image_bytes
+
+    region = Region(ANAN_REGION_X, ANAN_REGION_Y, ANAN_REGION_WIDTH, ANAN_REGION_HEIGHT)
+    style_kwargs = {
+        "color": (0, 0, 0, 255),
+        "max_font_size": effective_max_font_size,
+    }
+    if _PARSE_RULE_AVAILABLE:
+        style_kwargs["parse_rules"] = [ParseRule.cn_bracket(ANAN_BRACKET_COLOR)]
+    drawer.layer(Layer("text").text(text, region, TextStyle(**style_kwargs)))
+    return drawer.render()
 
 
 def get_statement_image(statement: Statement) -> str:
@@ -191,12 +263,20 @@ def get_option_coordinates(number: int) -> List[Tuple[int, int]]:
     ]
 
 
-def draw_trial(character: Character, options: List[Option]) -> bytes:
+def draw_trial(
+    character: Character,
+    options: List[Option],
+    font: Optional[str] = None,
+    max_font_size: Optional[float] = None,
+) -> bytes:
     """Draw the trial image for a character saying an option
 
     Args:
         character (Character): The character who is speaking
         options (List[Option]): The options being spoken
+        font (Optional[str], optional): Custom font path. Defaults to None (use bundled font).
+        max_font_size (Optional[float], optional): Maximum font size in px.
+                                                  None uses the default 48.
 
     Returns:
         bytes: The image bytes of the drawn image
@@ -210,59 +290,80 @@ def draw_trial(character: Character, options: List[Option]) -> bytes:
     
     if len(options) == 0:
         raise ValueError("选项数量不能为 0")
-    
-    # Background and character
-    drawer = Drawer(
-        base_image=str(PLUGIN_PATH / "assets/trial/black.png"),
-        font=str(PLUGIN_PATH / "assets/fonts/SourceHanSerifSC.otf"),
+
+    primary_font = _resolve_font(font, DEFAULT_TRIAL_FONT)
+    fonts = _make_font_set(primary_font, DEFAULT_TRIAL_FONT)
+
+    # 画布与角色层
+    drawer = Drawer(TRIAL_IMAGE_WIDTH, TRIAL_IMAGE_HEIGHT, fonts)
+    drawer.layer(
+        Layer("background").image_fit(
+            str(PLUGIN_PATH / "assets/trial/background.png"),
+            drawer.full_region(),
+            scale=ScaleMode.Stretch,
+        )
     )
-    drawer = drawer.paste_image(
-        str(PLUGIN_PATH / "assets/trial/background.png"),
-        region=DrawerRegion(0, 0, TRIAL_IMAGE_WIDTH, TRIAL_IMAGE_HEIGHT),
-        style=PasteStyle(keep_alpha=False),
-    ).paste_image(
-        str(
-            PLUGIN_PATH
-            / "assets/trial"
-            / ("ema.png" if character == Character.EMA else "hiro.png")
-        ),
-        region=DrawerRegion(667, 0, TRIAL_IMAGE_WIDTH, TRIAL_IMAGE_HEIGHT),
-        style=PasteStyle(keep_alpha=False),
+    drawer.layer(
+        Layer("character").image_fit(
+            str(
+                PLUGIN_PATH
+                / "assets/trial"
+                / ("ema.png" if character == Character.EMA else "hiro.png")
+            ),
+            Region(667, 0, TRIAL_IMAGE_WIDTH - 667, TRIAL_IMAGE_HEIGHT),
+            scale=ScaleMode.Stretch,
+        )
+    )
+
+    # 实际使用的最大字号（None -> 默认值 48）
+    effective_max_font_size = (
+        float(max_font_size)
+        if max_font_size is not None
+        else float(DEFAULT_TRIAL_FONT_SIZE)
     )
 
     # Options, texts, and statements
     coordinates = get_option_coordinates(len(options))
-    for option, (x, y) in zip(options, coordinates):
-        drawer = (
-            drawer.paste_image(
+    for i, (option, (x, y)) in enumerate(zip(options, coordinates)):
+        # 选项背景框
+        drawer.layer(
+            Layer(f"option_bg_{i}").image_fit(
                 str(PLUGIN_PATH / "assets/trial/option.png"),
-                region=DrawerRegion(x, y, x + OPTION_WIDTH, y + OPTION_HEIGHT),
-                style=PasteStyle(keep_alpha=False),
+                Region(x, y, OPTION_WIDTH, OPTION_HEIGHT),
+                scale=ScaleMode.Stretch,
             )
-            .draw_text(
-                text=option.text,
-                region=DrawerRegion(
-                    x + TEXT_OFFSET_X, 
-                    y + TEXT_OFFSET_Y, 
-                    x + TEXT_OFFSET_X + TEXT_WIDTH, 
-                    y + TEXT_OFFSET_Y + TEXT_HEIGHT
+        )
+        # 选项文本（【】高亮，字号自适应区域，上限 effective_max_font_size）
+        style_kwargs = {
+            "color": TEXT_COLOR,
+            "max_font_size": effective_max_font_size,
+        }
+        if _PARSE_RULE_AVAILABLE:
+            style_kwargs["parse_rules"] = [ParseRule.cn_bracket(BRACKET_COLOR)]
+        drawer.layer(
+            Layer(f"option_text_{i}").text(
+                option.text,
+                Region(
+                    x + TEXT_OFFSET_X,
+                    y + TEXT_OFFSET_Y,
+                    TEXT_WIDTH,
+                    TEXT_HEIGHT,
                 ),
-                style=TextStyle(
-                    color=TEXT_COLOR,
-                    bracket_color=BRACKET_COLOR,
-                    max_font_height=MAX_FONT_HEIGHT,
-                ),
+                TextStyle(**style_kwargs),
             )
-            .paste_image(
+        )
+        # 陈述类型图标（保持比例适配）
+        drawer.layer(
+            Layer(f"option_stmt_{i}").image_fit(
                 get_statement_image(option.statement),
-                region=DrawerRegion(
-                    x + STATEMENT_OFFSET_X, 
-                    y + STATEMENT_OFFSET_Y, 
-                    x + STATEMENT_OFFSET_X + STATEMENT_ICON_WIDTH, 
-                    y + STATEMENT_OFFSET_Y + STATEMENT_ICON_HEIGHT
+                Region(
+                    x + STATEMENT_OFFSET_X,
+                    y + STATEMENT_OFFSET_Y,
+                    STATEMENT_ICON_WIDTH,
+                    STATEMENT_ICON_HEIGHT,
                 ),
-                style=PasteStyle(keep_alpha=False),
+                scale=ScaleMode.Fit,
             )
         )
 
-    return drawer.finish()
+    return drawer.render()

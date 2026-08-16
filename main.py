@@ -8,6 +8,7 @@ from pathlib import Path
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, StarTools
 from astrbot.api import logger
+from astrbot.api import AstrBotConfig
 
 from .models import Option, Character
 from .drawer import draw_anan, draw_trial, MAX_OPTIONS_COUNT
@@ -37,10 +38,18 @@ class ManosabaMemesPlugin(Star):
       别名: manosaba帮助, 魔裁help
     """
     
-    def __init__(self, context: Context):
+    def __init__(self, context: Context, config: AstrBotConfig = None):
         super().__init__(context)
+        self.config = config or {}
         self.character_map = defaultdict(lambda: Character.EMA)
         self.data_file = None  # 将在 initialize 中设置
+        # 自定义字体与字号配置（None = 使用默认值/自动适配）
+        self.custom_font_anan = (self.config.get("custom_font_anan") or "").strip() or None
+        self.custom_font_trial = (self.config.get("custom_font_trial") or "").strip() or None
+        raw_anan_size = self.config.get("anan_font_size")
+        raw_trial_size = self.config.get("trial_font_size")
+        self.anan_font_size = float(raw_anan_size) if raw_anan_size else None
+        self.trial_font_size = float(raw_trial_size) if raw_trial_size else None
 
     async def initialize(self):
         """插件初始化方法"""
@@ -120,7 +129,14 @@ class ManosabaMemesPlugin(Star):
         
         try:
             loop = asyncio.get_event_loop()
-            image_bytes = await loop.run_in_executor(None, draw_anan, text, face)
+            image_bytes = await loop.run_in_executor(
+                None,
+                draw_anan,
+                text,
+                face,
+                self.custom_font_anan,
+                self.anan_font_size,
+            )
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f:
                 f.write(image_bytes)
                 temp_path = f.name
@@ -171,7 +187,12 @@ class ManosabaMemesPlugin(Star):
         try:
             loop = asyncio.get_event_loop()
             image_bytes = await loop.run_in_executor(
-                None, draw_trial, self.character_map[event.get_session_id()], options
+                None,
+                draw_trial,
+                self.character_map[event.get_session_id()],
+                options,
+                self.custom_font_trial,
+                self.trial_font_size,
             )
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f:
                 f.write(image_bytes)

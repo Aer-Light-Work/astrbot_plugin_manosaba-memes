@@ -49,3 +49,14 @@ ANAN_REGION_X = 100
 ANAN_REGION_Y = 432
 ANAN_REGION_WIDTH = 319
 ANAN_REGION_HEIGHT = 204
+
+# 默认字体（相对插件目录 assets/fonts/）
+DEFAULT_ANAN_FONT = "assets/fonts/SourceHanSansSC-Bold.otf"
+DEFAULT_TRIAL_FONT = "assets/fonts/SourceHanSerifSC.otf"
+
+# 默认最大字号（未在设置中指定时使用；文字塞不下时自动缩小适配）
+DEFAULT_ANAN_FONT_SIZE = 40
+DEFAULT_TRIAL_FONT_SIZE = 48
+
+# 安安文本中【】内的高亮颜色（紫色，保持与原版一致）
+ANAN_BRACKET_COLOR = (128, 0, 128, 255)
